@@ -7,9 +7,11 @@ from psychodynamic_agent.agents import (
     MainAIAgent,
 )
 from psychodynamic_agent.censoring import assert_no_direct_latent_copy
+from psychodynamic_agent.defense import assert_valid_conscious_ego_report
 from psychodynamic_agent.ego import assert_valid_ego_report
 from psychodynamic_agent.orchestrator.logging import safe_serialize
 from psychodynamic_agent.safety import assert_no_secret
+from psychodynamic_agent.schemas import CensorBDefensePlan
 from psychodynamic_agent.schemas.ego import EgoRealityPlan
 
 
@@ -81,9 +83,17 @@ class PsychodynamicPipeline:
             except ValueError as exc:
                 raise PipelineSafetyError(str(exc)) from exc
 
-            censor_b_payload = {"ego_report": ego_report.model_dump()}
+            censor_b_payload = self.censor_b.build_payload(ego_report)
             self._assert_boundary(censor_b_payload, "censor_b_input")
-            conscious_report = self.censor_b.run(censor_b_payload)
+            conscious_report = self.censor_b.run_payload(censor_b_payload)
+            try:
+                assert_valid_conscious_ego_report(
+                    ego_report=ego_report,
+                    defense_plan=CensorBDefensePlan.model_validate(censor_b_payload["defense_plan"]),
+                    conscious_report=conscious_report,
+                )
+            except ValueError as exc:
+                raise PipelineSafetyError(str(exc)) from exc
 
             main_ai_payload = {
                 "user_input": state.user_input,

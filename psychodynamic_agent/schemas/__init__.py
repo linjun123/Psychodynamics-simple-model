@@ -2,7 +2,10 @@ from .censor import (
     CensorAOutput,
     CensorATransformDirective,
     CensorATransformPlan,
+    CensorBDefenseDirective,
+    CensorBDefensePlan,
     ConsciousEgoReport,
+    DefenseMechanism,
     TransformMechanism,
 )
 from .ego import EgoRealityPlan, EgoReport
@@ -22,6 +25,9 @@ __all__ = [
     "TransformMechanism",
     "CensorATransformDirective",
     "CensorATransformPlan",
+    "DefenseMechanism",
+    "CensorBDefenseDirective",
+    "CensorBDefensePlan",
     "MainAIOutput",
     "SafetyGateOutput",
 ]

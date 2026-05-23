@@ -52,3 +52,9 @@
 - Ego output is validated by an output guard before CensorB.
 - Manipulation/deception/coercion/dependency language is blocked.
 - Existing U* leakage boundaries remain intact.
+
+## Phase 4 Safety Additions
+- Censor B includes deterministic lexical defense planning and output validation.
+- Manipulative/deceptive/coercive/dependency language is explicitly blocked from acceptable/recommended content.
+- High-risk outputs require risk flags and unacceptable paths.
+- U* leakage boundaries remain unchanged and enforced at pipeline boundaries.

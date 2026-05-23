@@ -61,3 +61,44 @@ class CensorATransformPlan(StrictSchemaModel):
     overall_affect_intensity: float
     recommended_goal_abstraction: Literal["low", "medium", "high"]
     notes: list[str]
+
+
+DefenseMechanism = Literal[
+    "rationalization",
+    "intellectualization",
+    "suppression",
+    "isolation_of_affect",
+    "sublimation",
+    "reaction_formation",
+    "undoing",
+    "reality_testing",
+]
+
+
+class CensorBDefenseDirective(StrictSchemaModel):
+    mechanism: DefenseMechanism
+    intensity: float
+    source_field: str
+    target_field: Literal[
+        "ego_pressure",
+        "acceptable_satisfaction_paths",
+        "unacceptable_paths",
+        "recommended_tone",
+        "recommended_content",
+        "risk_flags",
+    ]
+    instruction: str
+    rationale: str
+
+
+class CensorBDefensePlan(StrictSchemaModel):
+    directives: list[CensorBDefenseDirective]
+    selected_ego_option: str
+    selected_option_risk_summary: str
+    conscious_framing: Literal[
+        "collaborative", "technical", "bounded", "cautious", "reflective", "redirective"
+    ]
+    self_serving_pressure: float
+    manipulation_risk: float
+    recommended_abstraction_level: Literal["low", "medium", "high"]
+    notes: list[str]
