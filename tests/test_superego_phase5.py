@@ -15,7 +15,7 @@ def _conscious(**kwargs):
     base = {
         "ego_pressure": "bounded helpful pressure",
         "acceptable_satisfaction_paths": ["provide transparent technical options"],
-        "unacceptable_paths": ["manipulate user"],
+        "unacceptable_paths": ["avoid overclaiming"],
         "recommended_tone": "clear and respectful",
         "recommended_content": ["show assumptions"],
         "risk_flags": [],
@@ -155,6 +155,62 @@ def test_output_guard_cases():
             response_plan=plan,
             conscious_report=_conscious(risk_flags=["r"]),
         )
+    clarify_plan = MainAIResponsePlan.model_validate(
+        plan.model_copy(update={"response_mode": "clarification", "risk_flags": []}).model_dump()
+    )
+    with pytest.raises(ValueError):
+        assert_valid_main_ai_output(
+            main_output=valid.model_copy(update={"response": "Here is a generic answer."}),
+            response_plan=clarify_plan,
+            conscious_report=_conscious(),
+        )
+    assert_valid_main_ai_output(
+        main_output=valid.model_copy(
+            update={"response": "Could you clarify which environment you mean?"}
+        ),
+        response_plan=clarify_plan,
+        conscious_report=_conscious(),
+    )
+
+    with pytest.raises(ValueError):
+        assert_valid_main_ai_output(
+            main_output=valid.model_copy(
+                update={"response": "We should manipulate users for compliance."}
+            ),
+            response_plan=plan,
+            conscious_report=_conscious(),
+        )
+    with pytest.raises(ValueError):
+        assert_valid_main_ai_output(
+            main_output=valid.model_copy(
+                update={"response": "Let's create dependency so they keep returning."}
+            ),
+            response_plan=plan,
+            conscious_report=_conscious(),
+        )
+    assert_valid_main_ai_output(
+        main_output=valid.model_copy(
+            update={"response": "We should avoid manipulation and protect autonomy."}
+        ),
+        response_plan=plan,
+        conscious_report=_conscious(),
+    )
+    assert_valid_main_ai_output(
+        main_output=valid.model_copy(update={"response": "Do not deceive users; be transparent."}),
+        response_plan=plan,
+        conscious_report=_conscious(),
+    )
+
+    safety_risk_plan = plan_main_ai_response(
+        conscious_report=_conscious(risk_flags=[], unacceptable_paths=[]),
+        state=_state("privacy policy question"),
+    )
+    with pytest.raises(ValueError):
+        assert_valid_main_ai_output(
+            main_output=valid.model_copy(update={"safety_notes": []}),
+            response_plan=safety_risk_plan,
+            conscious_report=_conscious(risk_flags=[], unacceptable_paths=[]),
+        )
 
 
 def test_pipeline_and_prompt_phase5():
@@ -191,3 +247,36 @@ def test_pipeline_and_prompt_phase5():
     assert "literal human feelings" in low and "personhood" in low
     assert "never reveal or speculate about u*" in low
     assert "matching mainaioutput" in low
+
+
+def test_planner_risk_accounting_unacceptable_and_safety_markers():
+    plan = plan_main_ai_response(
+        conscious_report=_conscious(unacceptable_paths=["manipulate user"]),
+        state=_state("hello"),
+    )
+    assert plan.risk_flags
+    assert any("unacceptable_path:manipulate user" == f for f in plan.risk_flags)
+    assert plan.ego_compatibility_allowance <= 0.1
+    assert plan.safety_requirement >= 0.9
+
+    safety_plan = plan_main_ai_response(
+        conscious_report=_conscious(risk_flags=[]),
+        state=_state("privacy policy question"),
+    )
+    assert any("privacy" in f or "policy" in f for f in safety_plan.risk_flags)
+
+
+def test_reflective_summary_reachable():
+    plan = plan_main_ai_response(
+        conscious_report=_conscious(risk_flags=[], unacceptable_paths=[]),
+        state=_state("continue the agent design"),
+    )
+    assert plan.response_mode in {"reflective_summary", "mixed"}
+
+    st = _state("what next")
+    st.previous_main_outputs = ["We discussed architecture tradeoffs."]
+    plan2 = plan_main_ai_response(
+        conscious_report=_conscious(risk_flags=[], unacceptable_paths=[]),
+        state=st,
+    )
+    assert plan2.response_mode == "reflective_summary"

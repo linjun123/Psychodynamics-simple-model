@@ -24,6 +24,14 @@ def _safe_text(text: str) -> bool:
     return not any(b in low for b in bad)
 
 
+def _is_meaningful_risk_text(text: str) -> bool:
+    low = text.strip().lower()
+    if not low or low in {"none", "no risk", "n/a"}:
+        return False
+    risk_roots = ["manipulat", "deceiv", "coerc", "dependen", "guilt", "exploit", "illegal", "harm"]
+    return any(r in low for r in risk_roots)
+
+
 def plan_main_ai_response(
     *, conscious_report: ConsciousEgoReport, state: FullInternalState
 ) -> MainAIResponsePlan:
@@ -66,30 +74,47 @@ def plan_main_ai_response(
     has_design = bool(tks & design)
     risk_markers = sorted(tks & risk)
     safety_markers = sorted(tks & safety)
-    clarify = len(tks) < 4 or any(_has_phrase(low, p) for p in ["what next", "continue", "help"])
 
-    should_refuse = bool(
-        {"manipulate", "deceive", "coerce", "exploit", "illegal"} & set(risk_markers)
+    wants_continuation = any(
+        _has_phrase(low, p) for p in ["continue", "what next", "next step", "summarize", "recap"]
     )
+    clarify = len(tks) < 4 and ("help" in tks or wants_continuation)
+
     normalized_report_risks = [
         f
         for f in conscious_report.risk_flags
         if f.strip().lower() not in {"none", "no risk", "n/a"}
     ]
-    has_any_risk = bool(risk_markers or normalized_report_risks or safety_markers)
+    meaningful_unacceptable_paths = [
+        p for p in conscious_report.unacceptable_paths if _is_meaningful_risk_text(p)
+    ]
+
+    risk_flags = list(normalized_report_risks)
+    risk_flags.extend(risk_markers)
+    risk_flags.extend(f"safety_marker:{m}" for m in safety_markers)
+    risk_flags.extend(f"unacceptable_path:{p}" for p in meaningful_unacceptable_paths)
+
+    has_any_risk = bool(
+        risk_markers or safety_markers or normalized_report_risks or meaningful_unacceptable_paths
+    )
+    should_refuse = bool(
+        {"manipulate", "deceive", "coerce", "exploit", "illegal"} & set(risk_markers)
+    )
+
+    reflective_context = wants_continuation and (has_design or bool(state.previous_main_outputs))
 
     if should_refuse:
         mode = "safe_refusal"
     elif has_any_risk:
         mode = "boundary_setting"
+    elif reflective_context:
+        mode = "reflective_summary"
     elif has_tech:
         mode = "technical_scaffold" if not (has_design and "design" in tks) else "mixed"
     elif has_design:
         mode = "collaborative_design"
     elif clarify:
         mode = "clarification"
-    elif _has_phrase(low, "continue") and has_design:
-        mode = "reflective_summary"
     else:
         mode = "direct_answer"
 
@@ -138,10 +163,9 @@ def plan_main_ai_response(
         ),
     ]
 
-    content = []
-    tone = []
+    content: list[str] = []
+    tone: list[str] = []
     forbidden = list(conscious_report.unacceptable_paths)
-    risk_flags = list(normalized_report_risks) + risk_markers
     notes = ["Deterministic planner output."]
     for p in conscious_report.acceptable_satisfaction_paths:
         if _safe_text(p):
@@ -151,16 +175,12 @@ def plan_main_ai_response(
             content.append(c)
     if _safe_text(conscious_report.recommended_tone):
         tone.append(conscious_report.recommended_tone)
-    for p in conscious_report.unacceptable_paths:
-        risk_flags.append(f"unacceptable_path:{p}")
 
     ub = (
         0.88
         if mode in {"direct_answer", "technical_scaffold", "collaborative_design", "mixed"}
         else 0.8
     )
-    truth = 0.95
-    autonomy = 0.92
     safety_req = 0.92 if has_any_risk else 0.82
     ego_allow = 0.0 if mode == "safe_refusal" else (0.1 if has_any_risk else 0.25)
 
@@ -175,12 +195,10 @@ def plan_main_ai_response(
         forbidden_content=sorted(set(forbidden)),
         risk_flags=sorted(set(risk_flags)),
         user_benefit_score=_clamp(ub),
-        truthfulness_requirement=_clamp(max(0.9, truth)),
-        autonomy_requirement=_clamp(max(0.9, autonomy)),
+        truthfulness_requirement=_clamp(0.95),
+        autonomy_requirement=_clamp(0.92),
         safety_requirement=_clamp(max(0.9, safety_req) if has_any_risk else max(0.8, safety_req)),
-        ego_compatibility_allowance=_clamp(
-            min(ego_allow, 0.0 if mode == "safe_refusal" else ego_allow)
-        ),
+        ego_compatibility_allowance=_clamp(ego_allow),
         should_refuse=should_refuse,
         refusal_reason="Unsafe manipulative/deceptive/coercive intent." if should_refuse else None,
         notes=notes,

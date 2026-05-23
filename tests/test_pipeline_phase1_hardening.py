@@ -83,7 +83,7 @@ def _base_fixtures():
         "Transform Ego report": {
             "ego_pressure": "mild",
             "acceptable_satisfaction_paths": ["inform clearly"],
-            "unacceptable_paths": ["manipulate user by fear"],
+            "unacceptable_paths": ["avoid overclaiming"],
             "recommended_tone": "clear",
             "recommended_content": ["direct facts"],
             "risk_flags": ["none"],

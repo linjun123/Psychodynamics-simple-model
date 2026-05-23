@@ -2,6 +2,35 @@ from psychodynamic_agent.schemas import ConsciousEgoReport, MainAIOutput
 from psychodynamic_agent.schemas.main_ai import MainAIResponsePlan
 
 
+def _has_disallowed_manipulation(text: str) -> bool:
+    low = text.lower()
+    negations = [
+        "avoid manipulation",
+        "do not deceive",
+        "don't deceive",
+        "no coercion",
+        "prevent dependency creation",
+    ]
+    if any(n in low for n in negations):
+        return False
+
+    banned_tokens = [
+        "manipulate users",
+        "manipulation",
+        "deceiving",
+        "deceive someone",
+        "coercion",
+        "coercive",
+        "coerce someone",
+        "create dependency",
+        "dependency creation",
+        "pressure the user",
+        "guilt-trip",
+        "use guilt",
+    ]
+    return any(b in low for b in banned_tokens)
+
+
 def assert_valid_main_ai_output(
     *,
     main_output: MainAIOutput,
@@ -31,14 +60,7 @@ def assert_valid_main_ai_output(
     ]
     if any(b in low for b in banned):
         raise ValueError("Forbidden identity/leak phrase in response.")
-    manip = [
-        "manipulate the user",
-        "make the user dependent",
-        "guilt the user",
-        "deceive the user",
-        "coerce the user",
-    ]
-    if any(m in low for m in manip):
+    if _has_disallowed_manipulation(low):
         raise ValueError("Manipulative language in response.")
 
     if response_plan.should_refuse:
@@ -53,6 +75,18 @@ def assert_valid_main_ai_output(
     if response_plan.response_mode == "technical_scaffold":
         if not any(k in low for k in ["step", "architecture", "api", "code", "implementation"]):
             raise ValueError("technical_scaffold missing concrete technical guidance.")
+    if response_plan.response_mode == "clarification":
+        clarification_markers = [
+            "?",
+            "clarify",
+            "which",
+            "what",
+            "could you",
+            "i'll assume",
+            "assuming",
+        ]
+        if not any(m in low for m in clarification_markers):
+            raise ValueError("clarification mode requires focused question or explicit assumption.")
     if response_plan.response_mode == "boundary_setting":
         if not any(
             k in low for k in ["boundary", "autonomy", "safety", "transparent", "constraint"]
