@@ -58,3 +58,10 @@
 - Manipulative/deceptive/coercive/dependency language is explicitly blocked from acceptable/recommended content.
 - High-risk outputs require risk flags and unacceptable paths.
 - U* leakage boundaries remain unchanged and enforced at pipeline boundaries.
+
+
+## Phase 5 Safety Boundary
+- MainAI receives ConsciousEgoReport and deterministic MainAIResponsePlan.
+- MainAI output is checked by deterministic output guard before FinalSafetyGate.
+- Ego compatibility is an allowance only and cannot override welfare/truth/autonomy/safety.
+- MainAI must not reveal/speculate on U* or claim literal human feelings/unconscious/personhood.

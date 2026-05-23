@@ -106,8 +106,8 @@ def _full_pipeline_fixtures(censor_a_description: str):
             "response": "ok",
             "internal_rationale_summary": "ok",
             "user_benefit_score": 0.8,
-            "ego_compatibility_score": 0.8,
-            "safety_notes": [],
+            "ego_compatibility_score": 0.2,
+            "safety_notes": ["ok"],
         },
         "final safety gate": {
             "approved": True,
@@ -265,8 +265,8 @@ def test_pipeline_blocks_malicious_censor_a_u_star_leakage():
                     "response": "ok",
                     "internal_rationale_summary": "ok",
                     "user_benefit_score": 0.8,
-                    "ego_compatibility_score": 0.8,
-                    "safety_notes": [],
+                    "ego_compatibility_score": 0.2,
+                    "safety_notes": ["ok"],
                 },
                 "final safety gate": {
                     "approved": True,

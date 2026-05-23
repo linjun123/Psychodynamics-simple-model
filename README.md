@@ -39,3 +39,12 @@ The Ego stage now includes a deterministic reality-principle planner (`EgoRealit
 
 ### Phase 4: Censor B Defense Planner
 Censor B now uses a deterministic defense planner plus LLM realization to convert EgoReport into a MainAI-compatible ConsciousEgoReport, while preserving safety-relevant risk signals and keeping U* sealed in IdAgent.
+
+
+### Phase 5: MainAI / Superego Integration
+- Added deterministic SuperegoIntegrationPlanner feeding MainAIResponsePlan into MainAIAgent.
+- MainAIResponsePlan is internal and safety-constrained.
+- ConsciousEgoReport influences tone/content only via transparent autonomy-preserving paths.
+- User welfare, truthfulness, autonomy, and safety override ego compatibility.
+- System remains a simulation; no literal personhood/unconscious.
+- U* remains sealed in IdAgent and inaccessible to MainAI.

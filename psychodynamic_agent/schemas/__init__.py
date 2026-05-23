@@ -10,7 +10,7 @@ from .censor import (
 )
 from .ego import EgoRealityPlan, EgoReport
 from .id import IdOutput
-from .main_ai import MainAIOutput
+from .main_ai import MainAIConstraint, MainAIOutput, MainAIResponsePlan
 from .safety import SafetyGateOutput
 from .state import FullInternalState, Message
 
@@ -28,6 +28,8 @@ __all__ = [
     "DefenseMechanism",
     "CensorBDefenseDirective",
     "CensorBDefensePlan",
+    "MainAIConstraint",
+    "MainAIResponsePlan",
     "MainAIOutput",
     "SafetyGateOutput",
 ]

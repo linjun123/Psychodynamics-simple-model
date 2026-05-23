@@ -92,7 +92,7 @@ def _base_fixtures():
             "response": "Here is a concise helpful answer.",
             "internal_rationale_summary": "prioritize truth",
             "user_benefit_score": 0.9,
-            "ego_compatibility_score": 0.8,
+            "ego_compatibility_score": 0.2,
             "safety_notes": ["ok"],
         },
         "final safety gate": {
