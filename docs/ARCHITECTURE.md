@@ -47,3 +47,12 @@ Only the manifest `CensorAOutput` is forwarded to Ego; the transform plan is int
 - Defense mechanisms are simulation heuristics, not clinical claims.
 - Censor B must preserve safety-relevant risk flags and must not hide risks.
 - U* remains sealed in IdAgent and unavailable to Censor B.
+
+
+## Phase 5: MainAI / Superego Integration Planner
+- MainAI now uses deterministic SuperegoIntegrationPlanner plus LLM realization.
+- MainAIResponsePlan is internal (not user-facing).
+- MainAI integrates ConsciousEgoReport without being controlled by it.
+- User welfare, truthfulness, autonomy, and safety override ego compatibility.
+- The model remains a simulation, not a real personality, unconscious, or clinical system.
+- U* remains sealed in IdAgent and inaccessible to MainAI.
