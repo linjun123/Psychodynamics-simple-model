@@ -40,3 +40,10 @@ Only the manifest `CensorAOutput` is forwarded to Ego; the transform plan is int
 - Ego evaluates strategy consequences rather than producing final answers.
 - Ego must not know U*.
 - Manifest-goal satisfaction cannot override user benefit, truthfulness, autonomy, and safety.
+
+## Phase 4: Censor B Defensive Mechanism Planner
+- Censor B now applies a deterministic CensorBDefensePlan before LLM realization.
+- DefensePlan is internal to Censor B and used to transform EgoReport into ConsciousEgoReport.
+- Defense mechanisms are simulation heuristics, not clinical claims.
+- Censor B must preserve safety-relevant risk flags and must not hide risks.
+- U* remains sealed in IdAgent and unavailable to Censor B.

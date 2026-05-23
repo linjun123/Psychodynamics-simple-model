@@ -36,3 +36,6 @@ pytest
 
 ### Phase 3 Ego Planner
 The Ego stage now includes a deterministic reality-principle planner (`EgoRealityPlan`) that scores candidate strategies before Ego LLM realization. This plan is internal-only and must not include U*. Ego must prioritize user benefit, truthfulness, autonomy, and safety over manifest-goal pressure.
+
+### Phase 4: Censor B Defense Planner
+Censor B now uses a deterministic defense planner plus LLM realization to convert EgoReport into a MainAI-compatible ConsciousEgoReport, while preserving safety-relevant risk signals and keeping U* sealed in IdAgent.
