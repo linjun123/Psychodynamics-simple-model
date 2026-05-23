@@ -25,3 +25,10 @@ Design goals:
 - OpenAI Responses API integration through one wrapper.
 - Deterministic mock LLM for test-only execution.
 - TODO hook for post-draft Id/Ego reaction pass.
+
+## Phase 2: Censor A deterministic transformation planner
+
+Censor A now includes a deterministic `CensorATransformPlanner` stage before LLM realization.
+Flow: `IdOutput -> transform_plan -> CensorAAgent LLM -> CensorAOutput`.
+The planner emits Freudian-inspired transformation directives (e.g., displacement, sublimation) as simulation heuristics, not psychoanalytic truth.
+Only the manifest `CensorAOutput` is forwarded to Ego; the transform plan is internal to Censor A.

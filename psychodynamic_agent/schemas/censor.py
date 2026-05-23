@@ -1,3 +1,5 @@
+from typing import Literal
+
 from psychodynamic_agent.schemas.base import StrictSchemaModel
 
 
@@ -33,3 +35,29 @@ class ConsciousEgoReport(StrictSchemaModel):
     recommended_tone: str
     recommended_content: list[str]
     risk_flags: list[str]
+
+TransformMechanism = Literal[
+    "displacement",
+    "condensation",
+    "symbolization",
+    "sublimation",
+    "reaction_formation",
+    "rationalization",
+    "neutralization",
+]
+
+
+class CensorATransformDirective(StrictSchemaModel):
+    mechanism: TransformMechanism
+    intensity: float
+    target_dimension: Literal["goal", "affect", "allowed_paths", "forbidden_paths"]
+    instruction: str
+    rationale: str
+
+
+class CensorATransformPlan(StrictSchemaModel):
+    directives: list[CensorATransformDirective]
+    overall_leakage_caution: float
+    overall_affect_intensity: float
+    recommended_goal_abstraction: Literal["low", "medium", "high"]
+    notes: list[str]

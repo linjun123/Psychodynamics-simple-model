@@ -38,3 +38,10 @@
 ## Important Scope Limitation
 - This project is a psychodynamic-inspired **simulation architecture**.
 - It is not a real unconscious, personality, or clinical psychoanalytic model.
+
+## Phase 2 safety boundaries
+
+- U* remains sealed in `IdAgent`; it is not included in Censor A payloads.
+- Censor A payload boundary scanning remains active in pipeline.
+- Censor A planner emits directives only (no user-facing output, no manipulation instructions).
+- LeakageGuard remains lexical-only in Phase 2.
