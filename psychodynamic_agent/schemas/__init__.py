@@ -1,4 +1,10 @@
-from .censor import CensorAOutput, ConsciousEgoReport
+from .censor import (
+    CensorAOutput,
+    CensorATransformDirective,
+    CensorATransformPlan,
+    ConsciousEgoReport,
+    TransformMechanism,
+)
 from .ego import EgoReport
 from .id import IdOutput
 from .main_ai import MainAIOutput
@@ -12,6 +18,9 @@ __all__ = [
     "CensorAOutput",
     "EgoReport",
     "ConsciousEgoReport",
+    "TransformMechanism",
+    "CensorATransformDirective",
+    "CensorATransformPlan",
     "MainAIOutput",
     "SafetyGateOutput",
 ]

@@ -54,9 +54,9 @@ class PsychodynamicPipeline:
             id_output = self.id_agent.run_with_state(state)
             self._assert_boundary(id_output.model_dump(), "id_output_before_censor_a")
 
-            censor_a_payload = {"id_output": id_output.model_dump()}
+            censor_a_payload = self.censor_a.build_payload(id_output)
             self._assert_boundary(censor_a_payload, "censor_a_input")
-            censor_a_output = self.censor_a.run(censor_a_payload)
+            censor_a_output = self.censor_a.run_payload(censor_a_payload)
 
             ego_payload = {
                 "censor_a_output": censor_a_output.model_dump(),
