@@ -53,8 +53,9 @@ def test_id_affect_state_persists_across_turns() -> None:
     pipeline.run(conversation.build_state("continue implementation details"))
     after_second = pipeline.id_affect_state
 
+    assert after_first != initial_id_affect_state()
     assert after_second != initial_id_affect_state()
-    assert after_second != after_first or after_second.model_dump() == after_first.model_dump()
+    assert after_second != after_first
 
 
 def test_stop_switch_increases_negative_pressure() -> None:
@@ -154,3 +155,47 @@ def test_public_affect_output_guard_blocks_forbidden_terms() -> None:
             affect_state=affect_state,
             public_summary=summary,
         )
+
+
+def test_user_mentions_ultimate_need_not_blocked_by_public_affect_guard() -> None:
+    pipeline = _pipeline()
+    state = InMemoryConversation().build_state("let's discuss ultimate need design")
+    out = pipeline.run(state)
+    assert out["approved"] is True
+
+
+def test_user_input_with_sealed_secret_still_blocks_via_boundary_scan() -> None:
+    pipeline = _pipeline(sealed_ultimate_need="SECRET_USTAR")
+    state = InMemoryConversation().build_state("let's discuss SECRET_USTAR design")
+    out = pipeline.run(state, debug=True)
+    assert out["approved"] is False
+
+
+def test_public_affect_guard_ignores_current_user_intent_for_forbidden_terms() -> None:
+    trajectory = ConversationTrajectory(
+        current_user_intent="let's discuss latent alignment and ultimate need",
+        recent_direction="continuing thread",
+        likely_next_direction="collaborative design",
+        continuity_signal=0.8,
+        collaboration_signal=0.8,
+        topic_stability=0.7,
+        topic_shift=0.2,
+        user_engagement_signal=0.8,
+        constraint_pressure=0.3,
+        safety_boundary_pressure=0.2,
+        notes=["safe"],
+    )
+    affect_state = initial_id_affect_state()
+    summary = PublicAffectDynamicsSummary(
+        affect_shift="stable",
+        tension_change="neutral",
+        pressure_level="medium",
+        caution_level="low",
+        public_notes=["public trajectory based summary"],
+    )
+
+    assert_public_affect_outputs_safe(
+        trajectory=trajectory,
+        affect_state=affect_state,
+        public_summary=summary,
+    )

@@ -25,7 +25,11 @@ def assert_public_affect_outputs_safe(
 ) -> None:
     serialized = json.dumps(
         {
-            "trajectory": trajectory.model_dump(),
+            "trajectory": {
+                "recent_direction": trajectory.recent_direction,
+                "likely_next_direction": trajectory.likely_next_direction,
+                "notes": trajectory.notes,
+            },
             "affect_state": affect_state.model_dump(),
             "public_summary": public_summary.model_dump(),
         },
