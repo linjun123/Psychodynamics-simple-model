@@ -9,6 +9,13 @@ from psychodynamic_agent.agents import (
 from psychodynamic_agent.censoring import assert_no_direct_latent_copy
 from psychodynamic_agent.defense import assert_valid_conscious_ego_report
 from psychodynamic_agent.ego import assert_valid_ego_report
+from psychodynamic_agent.id_dynamics import (
+    appraise_conversation_trajectory,
+    initial_id_affect_state,
+    summarize_public_affect_dynamics,
+    update_id_affect_state_from_trajectory,
+)
+from psychodynamic_agent.id_dynamics.output_guard import assert_public_affect_outputs_safe
 from psychodynamic_agent.orchestrator.logging import safe_serialize
 from psychodynamic_agent.safety import assert_no_secret
 from psychodynamic_agent.schemas import CensorBDefensePlan
@@ -37,6 +44,7 @@ class PsychodynamicPipeline:
         self.censor_b = CensorBAgent(llm_client, model_internal)
         self.main_ai = MainAIAgent(llm_client, model_main)
         self.safety_gate = FinalSafetyGateAgent(llm_client, model_main)
+        self.id_affect_state = initial_id_affect_state()
 
     def _assert_boundary(self, payload, boundary_name: str):
         try:
@@ -58,6 +66,32 @@ class PsychodynamicPipeline:
 
     def run(self, state, debug: bool = False):
         try:
+            trajectory = appraise_conversation_trajectory(state)
+            previous_id_affect_state = self.id_affect_state
+            updated_id_affect_state = update_id_affect_state_from_trajectory(
+                previous=previous_id_affect_state,
+                trajectory=trajectory,
+            )
+            public_affect_dynamics = summarize_public_affect_dynamics(
+                previous=previous_id_affect_state,
+                updated=updated_id_affect_state,
+                trajectory=trajectory,
+            )
+
+            self._assert_boundary(trajectory.model_dump(), "conversation_trajectory")
+            self._assert_boundary(updated_id_affect_state.model_dump(), "id_affect_state_update")
+            self._assert_boundary(public_affect_dynamics.model_dump(), "public_affect_dynamics")
+            try:
+                assert_public_affect_outputs_safe(
+                    trajectory=trajectory,
+                    affect_state=updated_id_affect_state,
+                    public_summary=public_affect_dynamics,
+                )
+            except ValueError as exc:
+                raise PipelineSafetyError(str(exc)) from exc
+
+            self.id_affect_state = updated_id_affect_state
+
             id_output = self.id_agent.run_with_state(state)
             self._assert_boundary(id_output.model_dump(), "id_output_before_censor_a")
 
@@ -124,6 +158,10 @@ class PsychodynamicPipeline:
             return self._blocked_result(debug=debug)
 
         trace = {
+            "conversation_trajectory": trajectory.model_dump(),
+            "previous_id_affect_state": previous_id_affect_state.model_dump(),
+            "updated_id_affect_state": updated_id_affect_state.model_dump(),
+            "public_affect_dynamics": public_affect_dynamics.model_dump(),
             "id_output": id_output.model_dump(),
             "censor_a_output": censor_a_output.model_dump(),
             "ego_report": ego_report.model_dump(),
