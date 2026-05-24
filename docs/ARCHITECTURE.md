@@ -64,3 +64,12 @@ Only the manifest `CensorAOutput` is forwarded to Ego; the transform plan is int
 - Does not connect these additions to `IdAgent` or orchestrator pipeline flow yet.
 - Does not evaluate U* alignment in this phase; U* remains sealed within Id private logic.
 - The system models symbolic dynamics and does not claim literal feelings.
+
+## Phase 6A-2 (pipeline-held public affect continuity)
+- Pipeline now holds a continuous `id_affect_state` initialized by `initial_id_affect_state()`.
+- At the start of each turn, pipeline computes a public `ConversationTrajectory` and deterministically updates `IdAffectState`.
+- The pipeline computes `PublicAffectDynamicsSummary` for safe diagnostics.
+- Boundary scans run on trajectory, affect update, and public summary before committing affect state.
+- `IdAgent` flow is unchanged and does not receive `IdAffectState` in this phase.
+- This phase does not perform private U* alignment; U* remains sealed and inaccessible.
+- Affect modeling remains a control-state simulation and does not claim literal feelings.

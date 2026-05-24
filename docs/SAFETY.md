@@ -72,3 +72,9 @@
 - No U* evaluation is performed in this phase.
 - U* remains sealed in `IdAgent`; no new secret-bearing public outputs are introduced.
 - The model does not claim literal feelings; affect fields are control-state abstractions.
+
+## Phase 6A-2 public affect safety boundary
+- `ConversationTrajectory`, `IdAffectState` updates, and `PublicAffectDynamicsSummary` are boundary-scanned before state commit.
+- Public affect outputs also pass a forbidden-term guard (`u*`, `u_star`, `ultimate need`, `latent alignment`, etc.).
+- If these public checks fail, the turn is blocked and `id_affect_state` is not committed.
+- This phase intentionally does not expose latent/private alignment and does not pass affect state into `IdAgent`.
