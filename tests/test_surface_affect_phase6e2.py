@@ -130,8 +130,32 @@ def test_pipeline_passes_surface_profile_to_main_ai_and_keeps_plan_unchanged():
     assert "surface_affect_profile" not in schema_properties
 
 
-def test_surface_profile_reflects_cautious_bounded_inputs():
-    client = SpyMockLLMClient(_fixtures(conscious_framing="bounded"))
+def test_pipeline_passes_generated_surface_profile_into_main_ai_payload(monkeypatch):
+    expected_profile = SurfaceAffectProfile.model_validate(
+        {
+            "style_label": "firm_bounded",
+            "warmth": 0.25,
+            "caution": 0.9,
+            "energy": 0.4,
+            "composure": 0.85,
+            "curiosity": 0.2,
+            "firmness": 0.9,
+            "boundary_strength": 0.95,
+            "collaborative_pull": 0.2,
+            "pacing": "steady",
+            "sentence_style": "concise",
+            "user_visible_tone": "firm test tone",
+            "expression_guidance": ["Use concise bounded language."],
+            "notes": ["test fixture"],
+        }
+    )
+
+    monkeypatch.setattr(
+        "psychodynamic_agent.orchestrator.pipeline.build_surface_affect_profile",
+        lambda **kwargs: expected_profile,
+    )
+
+    client = SpyMockLLMClient(_fixtures())
     pipeline = PsychodynamicPipeline(
         llm_client=client,
         model_internal="x",
@@ -143,7 +167,8 @@ def test_surface_profile_reflects_cautious_bounded_inputs():
         call for call in client.calls if "user-facing assistant" in call["system_prompt"]
     )
     profile = main_call["payload"]["surface_affect_profile"]
-    assert profile["boundary_strength"] >= 0.5 or profile["caution"] >= 0.5
+    assert profile["style_label"] == "firm_bounded"
+    assert profile["user_visible_tone"] == "firm test tone"
 
 
 def test_debug_trace_includes_surface_profile_and_omits_private_terms():
