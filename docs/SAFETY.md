@@ -100,3 +100,10 @@
 - This phase does not wire affect propagation into CensorA or Ego runtime payloads.
 - Sealed U* and latent/private alignment remain inaccessible outside Id private logic.
 - Affect modeling remains simulation-only and does not claim literal feelings.
+
+## Phase 6B-2: Censor A affect payload wiring
+- Censor A now receives `affect_trace` and `ego_affect_summary` alongside `id_output` and `transform_plan`.
+- `CensorAOutput.affective_color` is validated against deterministic `affect_trace.transformed_style`.
+- Affect remains a control-signal abstraction: raw affect is translated to tone/style, not literal feeling claims.
+- Ego scoring is unchanged in this phase; `EgoAffectSummary` is not yet passed into Ego planning.
+- Sealed U* and latent/private alignment remain private and inaccessible downstream.

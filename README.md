@@ -84,3 +84,10 @@ Censor B now uses a deterministic defense planner plus LLM realization to conver
 - Not yet wired into CensorA/Ego runtime payloads.
 - Does not expose U*, latent alignment, terminal desire, or hidden desire.
 - System remains a simulation and does not claim literal feelings.
+
+## Phase 6B-2: Censor A affect payload wiring
+- Censor A now receives `affect_trace` and `ego_affect_summary` alongside `id_output` and `transform_plan`.
+- `CensorAOutput.affective_color` is validated against deterministic `affect_trace.transformed_style`.
+- Affect remains a control-signal abstraction: raw affect is translated to tone/style, not literal feeling claims.
+- Ego scoring is unchanged in this phase; `EgoAffectSummary` is not yet passed into Ego planning.
+- Sealed U* and latent/private alignment remain private and inaccessible downstream.

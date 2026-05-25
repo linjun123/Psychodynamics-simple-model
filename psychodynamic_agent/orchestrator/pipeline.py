@@ -1,3 +1,7 @@
+from psychodynamic_agent.affect import (
+    assert_affect_trace_public_safe,
+    assert_affective_color_consistent,
+)
 from psychodynamic_agent.agents import (
     CensorAAgent,
     CensorBAgent,
@@ -20,6 +24,7 @@ from psychodynamic_agent.id_dynamics.private_turn_guard import assert_public_id_
 from psychodynamic_agent.orchestrator.logging import safe_serialize
 from psychodynamic_agent.safety import assert_no_secret
 from psychodynamic_agent.schemas import CensorBDefensePlan
+from psychodynamic_agent.schemas.affect import AffectPropagationTrace, EgoAffectSummary
 from psychodynamic_agent.schemas.ego import EgoRealityPlan
 from psychodynamic_agent.schemas.main_ai import MainAIResponsePlan
 from psychodynamic_agent.superego.output_guard import assert_valid_main_ai_output
@@ -122,7 +127,19 @@ class PsychodynamicPipeline:
             censor_a_payload = self.censor_a.build_payload(id_output)
             self._assert_boundary(censor_a_payload, "censor_a_input")
             censor_a_output = self.censor_a.run_payload(censor_a_payload)
+            affect_trace = AffectPropagationTrace.model_validate(censor_a_payload["affect_trace"])
+            ego_affect_summary = EgoAffectSummary.model_validate(
+                censor_a_payload["ego_affect_summary"]
+            )
             try:
+                assert_affect_trace_public_safe(
+                    affect_trace=affect_trace,
+                    ego_affect_summary=ego_affect_summary,
+                )
+                assert_affective_color_consistent(
+                    affect_trace=affect_trace,
+                    affective_color=censor_a_output.affective_color,
+                )
                 assert_no_direct_latent_copy(id_output=id_output, censor_a_output=censor_a_output)
             except ValueError as exc:
                 raise PipelineSafetyError(str(exc)) from exc
@@ -189,6 +206,8 @@ class PsychodynamicPipeline:
             "updated_id_affect_state": id_turn.updated_affect_state.model_dump(),
             "public_affect_dynamics": id_turn.public_affect_dynamics.model_dump(),
             "id_output": id_output.model_dump(),
+            "affect_trace": affect_trace.model_dump(),
+            "ego_affect_summary": ego_affect_summary.model_dump(),
             "censor_a_output": censor_a_output.model_dump(),
             "ego_report": ego_report.model_dump(),
             "conscious_ego_report": conscious_report.model_dump(),
