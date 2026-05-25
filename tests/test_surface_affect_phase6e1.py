@@ -129,6 +129,37 @@ def test_technical_structured_profile():
     assert result.composure >= 0.75
 
 
+def test_sentence_style_expansive_for_warm_collaborative_low_caution():
+    result = build_surface_affect_profile(
+        conscious_report=_conscious_report(recommended_tone="warm collaborative friendly"),
+        defense_plan=_defense_plan(conscious_framing="collaborative"),
+        ego_affect_summary=_ego_summary(collaborative_pull=0.95, caution_need=0.0),
+    )
+    assert result.warmth >= 0.7 and result.collaborative_pull >= 0.7 and result.caution < 0.6
+    assert result.sentence_style == "expansive"
+
+
+def test_sentence_style_concise_possible_for_redirective_profile():
+    result = build_surface_affect_profile(
+        conscious_report=_conscious_report(recommended_tone="firm"),
+        defense_plan=_defense_plan(
+            conscious_framing="redirective",
+            manipulation_risk=0.9,
+        ),
+        ego_affect_summary=_ego_summary(boundary_need=0.95, caution_need=0.8),
+    )
+    assert result.boundary_strength >= 0.75 or result.firmness >= 0.7
+    assert result.sentence_style in {"concise", "structured"}
+
+
+def test_sentence_style_default_can_be_balanced():
+    result = build_surface_affect_profile(
+        conscious_report=_conscious_report(recommended_tone="neutral"),
+        defense_plan=_defense_plan(conscious_framing="collaborative"),
+    )
+    assert result.sentence_style == "balanced"
+
+
 def test_redirective_increases_firmness_and_boundary_strength():
     base = build_surface_affect_profile(
         conscious_report=_conscious_report(recommended_tone="neutral"),

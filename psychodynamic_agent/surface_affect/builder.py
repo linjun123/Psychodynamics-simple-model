@@ -125,12 +125,14 @@ def build_surface_affect_profile(
     if preferred_reflective and pacing not in {"slow", "steady"}:
         pacing = "steady"
 
-    if composure >= 0.65 or framing in {"technical", "bounded", "cautious"} or preferred_structured:
+    if framing in {"technical", "bounded", "cautious"} or preferred_structured:
         sentence_style = "structured"
     elif firmness >= 0.7 or boundary_strength >= 0.75:
         sentence_style = "concise"
     elif warmth >= 0.7 and collaborative_pull >= 0.7 and caution < 0.6:
         sentence_style = "expansive"
+    elif composure >= 0.75:
+        sentence_style = "structured"
     else:
         sentence_style = "balanced"
 
