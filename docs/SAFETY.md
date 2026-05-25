@@ -138,3 +138,12 @@
 - `MainAIResponsePlan` is intentionally unchanged and does not yet consume `SurfaceAffectProfile`.
 - Sealed U*, latent/private alignment, and private Id outputs remain private and must not be exposed.
 - Surface affect controls response style/tone and must not be interpreted as literal feeling.
+
+
+### Phase 6E-3: MainAIResponsePlan consumes SurfaceAffectProfile
+- MainAIResponsePlan now consumes `SurfaceAffectProfile` when present.
+- Surface affect now shapes `tone_requirements` with user-visible tone, pacing, sentence style, and emotional color guidance.
+- Surface affect remains style metadata only (not literal feeling claims).
+- Surface affect does not override hard constraints, refusal logic, risk flags, or forbidden content.
+- No new guard is added in this phase.
+- U* and latent/private alignment artifacts remain private and excluded from MainAI payload planning schema.

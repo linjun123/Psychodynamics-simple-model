@@ -138,3 +138,12 @@ The pipeline now emits a structured `psychodynamic_trace` object under `safe_deb
 - No new dedicated guard is introduced; existing payload boundary scans remain in place.
 - U* and latent/private alignment remain sealed and excluded from runtime/debug artifacts.
 - Surface affect is a style-control abstraction, not a literal feeling claim.
+
+
+### Phase 6E-3: MainAIResponsePlan consumes SurfaceAffectProfile
+- MainAIResponsePlan now consumes `SurfaceAffectProfile` when present.
+- Surface affect now shapes `tone_requirements` with user-visible tone, pacing, sentence style, and emotional color guidance.
+- Surface affect remains style metadata only (not literal feeling claims).
+- Surface affect does not override hard constraints, refusal logic, risk flags, or forbidden content.
+- No new guard is added in this phase.
+- U* and latent/private alignment artifacts remain private and excluded from MainAI payload planning schema.

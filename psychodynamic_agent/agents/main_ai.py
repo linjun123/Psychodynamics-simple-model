@@ -20,7 +20,11 @@ class MainAIAgent(BaseLLMAgent):
         state: FullInternalState,
         surface_affect_profile: SurfaceAffectProfile | None = None,
     ) -> dict:
-        plan = plan_main_ai_response(conscious_report=conscious_report, state=state)
+        plan = plan_main_ai_response(
+            conscious_report=conscious_report,
+            state=state,
+            surface_affect_profile=surface_affect_profile,
+        )
         return {
             "user_input": state.user_input,
             "state_context": {

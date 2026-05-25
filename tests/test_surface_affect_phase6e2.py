@@ -72,6 +72,10 @@ def test_main_ai_build_payload_includes_optional_surface_profile():
     )
     assert "surface_affect_profile" in payload
     assert payload["surface_affect_profile"]["style_label"] == profile.style_label
+    assert any(
+        "surface affect style:" in t.lower()
+        for t in payload["main_ai_response_plan"]["tone_requirements"]
+    )
     serialized = json.dumps(payload).lower()
     assert "u_star" not in serialized
     assert "latent_alignment" not in serialized
@@ -80,7 +84,7 @@ def test_main_ai_build_payload_includes_optional_surface_profile():
     assert backward["surface_affect_profile"] is None
 
 
-def test_pipeline_passes_surface_profile_to_main_ai_and_keeps_plan_unchanged():
+def test_pipeline_passes_surface_profile_to_main_ai_and_plan_consumes_style_metadata():
     client = SpyMockLLMClient(_fixtures())
     pipeline = PsychodynamicPipeline(
         llm_client=client,
@@ -125,7 +129,13 @@ def test_pipeline_passes_surface_profile_to_main_ai_and_keeps_plan_unchanged():
     ]:
         assert forbidden not in serialized_payload
 
-    assert "surface_affect_profile" not in payload["main_ai_response_plan"]
+    plan = payload["main_ai_response_plan"]
+    assert "surface_affect_profile" not in plan
+    assert any("surface affect style:" in t.lower() for t in plan["tone_requirements"])
+    assert any(
+        "surfaceaffectprofile consumed as user-visible style metadata" in n.lower()
+        for n in plan["notes"]
+    )
     schema_properties = MainAIResponsePlan.model_json_schema().get("properties", {})
     assert "surface_affect_profile" not in schema_properties
 
