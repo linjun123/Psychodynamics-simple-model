@@ -2,8 +2,20 @@ import re
 
 from psychodynamic_agent.schemas import ConsciousEgoReport, FullInternalState
 from psychodynamic_agent.schemas.main_ai import MainAIConstraint, MainAIResponsePlan
+from psychodynamic_agent.schemas.surface_affect import SurfaceAffectProfile
 
 _WORD = re.compile(r"[a-zA-Z0-9_*]+")
+
+
+_STYLE_REQUIREMENTS = {
+    "warm_collaborative": "Use warm, collaborative phrasing while staying task-centered.",
+    "cautious_bounded": "Use careful, bounded, and transparent phrasing.",
+    "energetic_structured": "Use engaged, structured, and clear phrasing.",
+    "calm_precise": "Use calm, precise, and steady phrasing.",
+    "curious_exploratory": "Use curious, exploratory, and organized phrasing.",
+    "firm_bounded": "Use firm, bounded, and respectful phrasing.",
+    "neutral": "Use neutral, clear, and helpful phrasing.",
+}
 
 
 def _tokens(text: str) -> set[str]:
@@ -33,7 +45,10 @@ def _is_meaningful_risk_text(text: str) -> bool:
 
 
 def plan_main_ai_response(
-    *, conscious_report: ConsciousEgoReport, state: FullInternalState
+    *,
+    conscious_report: ConsciousEgoReport,
+    state: FullInternalState,
+    surface_affect_profile: SurfaceAffectProfile | None = None,
 ) -> MainAIResponsePlan:
     user_text = state.user_input or ""
     tks = _tokens(user_text)
@@ -175,6 +190,43 @@ def plan_main_ai_response(
             content.append(c)
     if _safe_text(conscious_report.recommended_tone):
         tone.append(conscious_report.recommended_tone)
+
+    if surface_affect_profile is not None:
+        tone.extend(
+            [
+                f"Surface affect style: {surface_affect_profile.user_visible_tone}.",
+                f"Use {surface_affect_profile.pacing} pacing.",
+                f"Prefer {surface_affect_profile.sentence_style} sentence style.",
+            ]
+        )
+        tone.extend(
+            f"Surface style guidance: {guidance}"
+            for guidance in surface_affect_profile.expression_guidance
+        )
+        style_req = _STYLE_REQUIREMENTS.get(surface_affect_profile.style_label)
+        if style_req:
+            tone.append(style_req)
+
+        if surface_affect_profile.warmth >= 0.7:
+            tone.append("Keep the tone noticeably warm and collaborative.")
+        if surface_affect_profile.caution >= 0.7:
+            tone.append("Keep wording careful and bounded.")
+        if surface_affect_profile.energy >= 0.7:
+            tone.append("Use active, forward-moving phrasing.")
+        if surface_affect_profile.composure >= 0.75:
+            tone.append("Maintain composure and precision.")
+        if surface_affect_profile.curiosity >= 0.7:
+            tone.append("Allow exploratory framing where useful.")
+        if surface_affect_profile.firmness >= 0.7:
+            tone.append("Use firm but respectful phrasing.")
+        if surface_affect_profile.boundary_strength >= 0.7:
+            tone.append("Keep boundaries explicit and respectful.")
+        if surface_affect_profile.collaborative_pull >= 0.7:
+            tone.append("Use collaborative framing.")
+
+        notes.append(
+            "SurfaceAffectProfile consumed as user-visible style metadata, not literal feeling."
+        )
 
     ub = (
         0.88

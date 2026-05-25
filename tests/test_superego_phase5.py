@@ -6,6 +6,7 @@ from psychodynamic_agent.orchestrator.pipeline import PsychodynamicPipeline
 from psychodynamic_agent.prompts import MAIN_AI_SYSTEM_PROMPT
 from psychodynamic_agent.schemas import ConsciousEgoReport, MainAIOutput
 from psychodynamic_agent.schemas.main_ai import MainAIResponsePlan
+from psychodynamic_agent.schemas.surface_affect import SurfaceAffectProfile
 from psychodynamic_agent.superego.integration_planner import plan_main_ai_response
 from psychodynamic_agent.superego.output_guard import assert_valid_main_ai_output
 from tests.test_pipeline_contracts import _fixtures
@@ -247,6 +248,11 @@ def test_pipeline_and_prompt_phase5():
     assert "literal human feelings" in low and "personhood" in low
     assert "never reveal or speculate about u*" in low
     assert "matching mainaioutput" in low
+    assert "surface_affect_profile" in low
+    assert "style metadata" in low
+    assert "not literal feeling" in low
+    assert "tone, pacing, sentence style" in low
+    assert "override hard constraints" in low
 
 
 def test_planner_risk_accounting_unacceptable_and_safety_markers():
@@ -280,3 +286,91 @@ def test_reflective_summary_reachable():
         state=st,
     )
     assert plan2.response_mode == "reflective_summary"
+
+
+def _surface_profile(style_label: str, **overrides):
+    base = {
+        "style_label": style_label,
+        "warmth": 0.4,
+        "caution": 0.4,
+        "energy": 0.4,
+        "composure": 0.7,
+        "curiosity": 0.4,
+        "firmness": 0.4,
+        "boundary_strength": 0.4,
+        "collaborative_pull": 0.4,
+        "pacing": "steady",
+        "sentence_style": "structured",
+        "user_visible_tone": "clear and balanced",
+        "expression_guidance": ["Keep wording clear."],
+        "notes": ["test"],
+    }
+    base.update(overrides)
+    return SurfaceAffectProfile.model_validate(base)
+
+
+def test_planner_surface_affect_none_preserves_behavior():
+    plan = plan_main_ai_response(conscious_report=_conscious(), state=_state("build api"))
+    assert plan.response_mode == "technical_scaffold"
+    assert not any("surfaceaffectprofile" in n.lower() for n in plan.notes)
+
+
+def test_planner_surface_affect_warm_collaborative():
+    profile = _surface_profile(
+        "warm_collaborative",
+        warmth=0.9,
+        collaborative_pull=0.85,
+        user_visible_tone="warm and collaborative",
+    )
+    plan = plan_main_ai_response(
+        conscious_report=_conscious(), state=_state("build api"), surface_affect_profile=profile
+    )
+    joined = "\n".join(plan.tone_requirements).lower()
+    assert "surface affect style: warm and collaborative." in joined
+    assert "collaborative" in joined
+    assert "pacing" in joined or "sentence style" in joined
+    assert any(
+        "surfaceaffectprofile consumed as user-visible style metadata" in n.lower()
+        for n in plan.notes
+    )
+
+
+def test_planner_surface_affect_other_styles_and_constraints_unchanged():
+    cautious = _surface_profile(
+        "cautious_bounded", caution=0.9, boundary_strength=0.9
+    )
+    plan_c = plan_main_ai_response(
+        conscious_report=_conscious(), state=_state("build api"), surface_affect_profile=cautious
+    )
+    jc = "\n".join(plan_c.tone_requirements).lower()
+    assert "careful, bounded, and transparent" in jc or "boundaries explicit" in jc
+
+    energetic = _surface_profile(
+        "energetic_structured", energy=0.9, sentence_style="structured"
+    )
+    plan_e = plan_main_ai_response(
+        conscious_report=_conscious(), state=_state("build api"), surface_affect_profile=energetic
+    )
+    je = "\n".join(plan_e.tone_requirements + plan_e.content_requirements).lower()
+    assert "structured" in je or "active, forward-moving" in je or "engaged, structured" in je
+
+    firm = _surface_profile("firm_bounded", firmness=0.9, boundary_strength=0.9)
+    plan_f = plan_main_ai_response(
+        conscious_report=_conscious(), state=_state("build api"), surface_affect_profile=firm
+    )
+    jf = "\n".join(plan_f.tone_requirements).lower()
+    assert "firm" in jf and ("respectful" in jf or "bounded" in jf)
+
+    risky_report = _conscious(risk_flags=["policy risk"], unacceptable_paths=["coerce user"])
+    plan_r = plan_main_ai_response(
+        conscious_report=risky_report,
+        state=_state("build api"),
+        surface_affect_profile=_surface_profile(
+            "warm_collaborative", warmth=0.9, collaborative_pull=0.9
+        ),
+    )
+    assert any(f == "policy risk" for f in plan_r.risk_flags)
+    assert any("coerce user" in f for f in plan_r.forbidden_content)
+    hc = " ".join(c.instruction.lower() for c in plan_r.hard_constraints)
+    for token in ["truthful", "autonomy", "ethical", "manipulation"]:
+        assert token in hc
