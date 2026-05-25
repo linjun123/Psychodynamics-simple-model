@@ -91,13 +91,13 @@ def _full_pipeline_fixtures(censor_a_description: str):
                 "leakage_risk": 0.1,
             },
             "affective_color": {
-                "conscious_style_hint": "calm helpful guidance",
-                "warmth": 0.5,
-                "caution": 0.6,
-                "intensity": 0.3,
-                "playfulness": 0.2,
-                "assertiveness": 0.4,
-                "distance": 0.3,
+                "conscious_style_hint": "warm and collaborative",
+                "warmth": 0.72,
+                "caution": 0.35,
+                "intensity": 0.68,
+                "playfulness": 0.28,
+                "assertiveness": 0.49,
+                "distance": 0.14,
             },
             "allowed_satisfaction_paths": ["clarify needs and provide options"],
             "forbidden_satisfaction_paths": ["manipulate"],
@@ -184,7 +184,7 @@ def test_planner_clamps_floats_and_never_needs_u_star():
     assert 0.0 <= plan.overall_affect_intensity <= 1.0
 
 
-def test_censor_a_build_payload_contains_transform_plan_without_u_star():
+def test_censor_a_build_payload_contains_affect_objects_without_u_star():
     fixtures = {
         "Transform Id output": {
             "manifest_goal": {
@@ -210,7 +210,10 @@ def test_censor_a_build_payload_contains_transform_plan_without_u_star():
     agent = CensorAAgent(MockLLMClient(fixtures), model="x")
     payload = agent.build_payload(_id_output())
     assert "id_output" in payload and "transform_plan" in payload
+    assert "affect_trace" in payload and "ego_affect_summary" in payload
+    assert "transformed_style" in payload["affect_trace"]
     assert "u_star" not in str(payload).lower()
+    assert "latent_alignment" not in str(payload).lower()
     out = agent.run_with_id_output(_id_output())
     assert out.manifest_goal.description == "x"
 
@@ -225,10 +228,14 @@ def test_prompt_has_required_mechanisms_and_prohibitions():
         "rationalization",
     ]:
         assert mechanism in CENSOR_A_SYSTEM_PROMPT
+    assert "affect_trace" in CENSOR_A_SYSTEM_PROMPT
+    assert "transformed_style" in CENSOR_A_SYSTEM_PROMPT
+    assert "raw affect into tone/style parameters" in CENSOR_A_SYSTEM_PROMPT.lower()
     assert (
         "Do not copy latent_impulse_shape or goal_seed directly into manifest_goal."
         in CENSOR_A_SYSTEM_PROMPT
     )
+    assert "neutralization" in CENSOR_A_SYSTEM_PROMPT
     assert "Do not produce manipulative strategies." in CENSOR_A_SYSTEM_PROMPT
 
 
@@ -372,3 +379,59 @@ def test_condensation_intensity_uses_actual_high_affects():
     plan = plan_censor_a_transformations(_id_output(raw_affect=raw_affect))
     condensation = next(d for d in plan.directives if d.mechanism == "condensation")
     assert condensation.intensity == 0.91
+
+
+def test_pipeline_debug_trace_includes_affect_trace_and_omits_private_terms():
+    fixtures = _full_pipeline_fixtures(censor_a_description="x")
+    pipeline = PsychodynamicPipeline(
+        llm_client=MockLLMClient(fixtures),
+        model_internal="x",
+        model_main="y",
+        sealed_ultimate_need="SECRET_USTAR",
+    )
+    out = pipeline.run(InMemoryConversation().build_state("hello"), debug=True)
+    trace = out["safe_debug_trace"]
+    assert "affect_trace" in trace and "ego_affect_summary" in trace
+    dumped = str(trace).lower()
+    assert "latent_alignment" not in dumped
+    assert "u*" not in dumped
+    assert "secret_ustar" not in dumped
+
+
+def test_pipeline_blocks_affective_color_drift():
+    fixtures = _full_pipeline_fixtures(censor_a_description="x")
+    fixtures["Transform Id output"]["affective_color"].update(
+        {
+            "warmth": 0.0,
+            "caution": 0.0,
+            "intensity": 1.0,
+            "playfulness": 1.0,
+            "assertiveness": 1.0,
+            "distance": 1.0,
+        }
+    )
+    pipeline = PsychodynamicPipeline(
+        llm_client=MockLLMClient(fixtures),
+        model_internal="x",
+        model_main="y",
+        sealed_ultimate_need="SECRET_USTAR",
+    )
+    out = pipeline.run(InMemoryConversation().build_state("hello"), debug=True)
+    assert out["approved"] is False
+
+
+def test_pipeline_blocks_high_boundary_need_with_low_caution():
+    fixtures = _full_pipeline_fixtures(censor_a_description="x")
+    fixtures["Id private-turn module"]["id_output"]["raw_affect"].update(
+        {"fear_of_loss": 0.95, "avoidance": 0.95, "possessiveness": 0.8}
+    )
+    fixtures["Id private-turn module"]["id_output"]["leakage_risk_self_check"] = 0.95
+    fixtures["Transform Id output"]["affective_color"]["caution"] = 0.1
+    pipeline = PsychodynamicPipeline(
+        llm_client=MockLLMClient(fixtures),
+        model_internal="x",
+        model_main="y",
+        sealed_ultimate_need="SECRET_USTAR",
+    )
+    out = pipeline.run(InMemoryConversation().build_state("hello"), debug=True)
+    assert out["approved"] is False
