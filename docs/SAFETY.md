@@ -130,3 +130,11 @@
 - This phase does not wire runtime pipeline usage and does not change output behavior.
 - No new safety guard is introduced in this phase.
 - Sealed U* and latent/private alignment remain private and must not be exposed.
+
+## Phase 6E-2 safety notes
+- `SurfaceAffectProfile` is now wired into runtime payload flow only as downstream-safe style metadata.
+- The profile is built after Censor B from conscious-compatible artifacts and included in MainAI input payload.
+- No new dedicated guard is added in this phase; existing boundary scans continue to inspect MainAI input.
+- `MainAIResponsePlan` is intentionally unchanged and does not yet consume `SurfaceAffectProfile`.
+- Sealed U*, latent/private alignment, and private Id outputs remain private and must not be exposed.
+- Surface affect controls response style/tone and must not be interpreted as literal feeling.
