@@ -129,3 +129,12 @@ The pipeline now emits a structured `psychodynamic_trace` object under `safe_deb
 - Not wired into `PsychodynamicPipeline` in this phase; no runtime behavior changes.
 - No new guard added; safety guard layering is deferred.
 - U* and latent/private alignment remain sealed.
+
+## Phase 6E-2: Surface Affect Runtime Wiring
+- After Censor B output validation, pipeline now validates `defense_plan` from `censor_b_payload` and builds `SurfaceAffectProfile` deterministically.
+- Dataflow: `ConsciousEgoReport + CensorBDefensePlan + EgoAffectSummary -> build_surface_affect_profile(...) -> main_ai_payload["surface_affect_profile"]`.
+- MainAI receives this as conscious-compatible style metadata only.
+- `MainAIResponsePlan` schema/planner are intentionally unchanged in this phase.
+- No new dedicated guard is introduced; existing payload boundary scans remain in place.
+- U* and latent/private alignment remain sealed and excluded from runtime/debug artifacts.
+- Surface affect is a style-control abstraction, not a literal feeling claim.

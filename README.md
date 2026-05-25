@@ -119,3 +119,11 @@ Censor B now uses a deterministic defense planner plus LLM realization to conver
 - This phase is not wired into runtime yet and does not change output behavior.
 - No new guard is introduced in this phase.
 - U* and latent alignment remain private.
+
+## Phase 6E-2: Surface Affect Runtime Wiring
+- Pipeline now deterministically builds `SurfaceAffectProfile` after Censor B using `ConsciousEgoReport + CensorBDefensePlan + EgoAffectSummary`.
+- `SurfaceAffectProfile` is passed into `MainAIAgent` payload as conscious-compatible style metadata.
+- `MainAIResponsePlan` is intentionally unchanged and does not consume `SurfaceAffectProfile` in this phase.
+- No new guard is added in this phase; existing boundary scans continue to enforce payload safety.
+- Sealed U* and latent/private alignment remain private and unavailable downstream.
+- Surface affect remains style/tone control metadata and does not claim literal feelings.

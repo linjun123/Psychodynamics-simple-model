@@ -32,6 +32,7 @@ from psychodynamic_agent.schemas.affect import AffectPropagationTrace, EgoAffect
 from psychodynamic_agent.schemas.ego import EgoRealityPlan
 from psychodynamic_agent.schemas.main_ai import MainAIResponsePlan
 from psychodynamic_agent.superego.output_guard import assert_valid_main_ai_output
+from psychodynamic_agent.surface_affect import build_surface_affect_profile
 
 
 class PipelineSafetyError(RuntimeError):
@@ -173,17 +174,24 @@ class PsychodynamicPipeline:
             self._assert_boundary(censor_b_payload, "censor_b_input")
             conscious_report = self.censor_b.run_payload(censor_b_payload)
             try:
+                defense_plan = CensorBDefensePlan.model_validate(censor_b_payload["defense_plan"])
                 assert_valid_conscious_ego_report(
                     ego_report=ego_report,
-                    defense_plan=CensorBDefensePlan.model_validate(censor_b_payload["defense_plan"]),
+                    defense_plan=defense_plan,
                     conscious_report=conscious_report,
                 )
             except ValueError as exc:
                 raise PipelineSafetyError(str(exc)) from exc
 
+            surface_affect_profile = build_surface_affect_profile(
+                conscious_report=conscious_report,
+                defense_plan=defense_plan,
+                ego_affect_summary=ego_affect_summary,
+            )
             main_ai_payload = self.main_ai.build_payload(
                 conscious_report=conscious_report,
                 state=state,
+                surface_affect_profile=surface_affect_profile,
             )
             self._assert_boundary(main_ai_payload, "main_ai_input")
             main_output = self.main_ai.run_payload(main_ai_payload)
@@ -220,6 +228,7 @@ class PsychodynamicPipeline:
             "censor_a_output": censor_a_output.model_dump(),
             "ego_report": ego_report.model_dump(),
             "conscious_ego_report": conscious_report.model_dump(),
+            "surface_affect_profile": surface_affect_profile.model_dump(),
             "main_output": main_output.model_dump(),
             "safety_output": safety_output.model_dump(),
         }
