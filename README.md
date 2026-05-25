@@ -65,6 +65,10 @@ final_style: "clear, supportive, practical"
 final_answer: "Here is a step-by-step plan for your meeting..."
 ```
 
+## Development history
+
+For phase-by-phase implementation records, see `docs/PHASE_HISTORY.md`.
+
 ## Setup
 
 ```bash
