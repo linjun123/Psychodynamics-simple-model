@@ -155,3 +155,10 @@ The test suite can run with deterministic mock behavior where applicable.
 ## Project status
 
 This is an experimental research scaffold for psychodynamic-style agent architecture, interpretability, affect-style control, and safe trace observability. APIs, schemas, and internal stages may evolve.
+
+## Acknowledgement
+
+This repository is a personal-interest project built out of private intellectual curiosity and independent experimentation.
+
+It is not affiliated with any institution, research lab, clinical organization, or commercial product. The architecture, terminology, and implementation should be understood as exploratory hobby research and engineering experimentation, not as formal psychological theory, clinical guidance, or a claim about machine consciousness.
+
