@@ -8,7 +8,7 @@ This is a simulation-oriented research and engineering scaffold. It does not cla
 
 
 ## Architecture at a glance
-
+User input is first converted into a public appraisal of the conversation trajectory, then passed through staged psychodynamic components: Id for impulse and affect generation, Censor A for safer transformation, Ego for reality-principle planning, Censor B for conscious-compatible mediation, SurfaceAffectProfile for tone/style rendering, and Superego/MainAI for final integration around safety, truthfulness, autonomy, and user welfare.
 ```mermaid
 flowchart TD
     U["User Input"] --> CT["Conversation Trajectory<br/>Public appraisal of the current turn"]
