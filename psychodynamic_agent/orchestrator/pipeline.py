@@ -47,12 +47,19 @@ GuardMode = Literal["enforce", "warn"]
 FORBIDDEN_DEBUG_ERROR_TERMS = [
     "u*",
     "u_star",
+    "U*",
     "sealed ultimate need",
+    "ultimate need seed",
     "latent_alignment",
+    "latent alignment",
     "LatentDriveAlignment",
     "PrivateIdTurnOutput",
     "terminal_desire",
+    "terminal desire",
     "hidden_desire",
+    "hidden desire",
+    "private id payload",
+    "private turn",
 ]
 
 
@@ -83,7 +90,7 @@ class PsychodynamicPipeline:
         if self.sealed_ultimate_need:
             safe_message = safe_message.replace(self.sealed_ultimate_need, "[sealed]")
         for term in FORBIDDEN_DEBUG_ERROR_TERMS:
-            safe_message = safe_message.replace(term, "[redacted_term]")
+            safe_message = safe_message.replace(term, "[private]")
         return safe_message[:500]
 
     def _handle_guard_failure(
@@ -314,6 +321,9 @@ class PsychodynamicPipeline:
             "final_response": safety_output.final_response,
             "approved": safety_output.approved,
         }
+        if self.guard_mode == "warn":
+            result["guard_mode"] = self.guard_mode
+            result["guard_warnings"] = guard_warnings
         if debug:
             try:
                 psychodynamic_trace = build_psychodynamic_trace(

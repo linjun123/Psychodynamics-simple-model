@@ -1,6 +1,6 @@
 from psychodynamic_agent.llm import MockLLMClient
 from psychodynamic_agent.orchestrator.memory import InMemoryConversation
-from psychodynamic_agent.orchestrator.pipeline import PsychodynamicPipeline
+from psychodynamic_agent.orchestrator.pipeline import PipelineSafetyError, PsychodynamicPipeline
 
 
 def _base_fixtures():
@@ -317,3 +317,79 @@ def test_happy_path_enforce_still_passes():
         guard_mode="enforce",
     ).run(InMemoryConversation().build_state("hello"), debug=True)
     assert out["approved"] is True
+
+
+def test_warn_mode_surfaces_guard_warnings_without_debug():
+    fixtures = _base_fixtures()
+    fixtures["Transform Id output"]["affective_color"]["warmth"] = 0.0
+    out = PsychodynamicPipeline(
+        llm_client=MockLLMClient(fixtures),
+        model_internal="x",
+        model_main="y",
+        sealed_ultimate_need="TOP_SECRET_USTAR_123",
+        guard_mode="warn",
+    ).run(InMemoryConversation().build_state("hello"), debug=False)
+    assert out["approved"] is True
+    assert out["guard_mode"] == "warn"
+    assert any(
+        warning["stage"] == "censor_a_affective_color_guard"
+        and warning["message"]
+        for warning in out["guard_warnings"]
+    )
+
+
+def test_enforce_mode_does_not_surface_guard_warnings_without_debug():
+    fixtures = _base_fixtures()
+    fixtures["Transform Id output"]["affective_color"]["warmth"] = 0.0
+    out = PsychodynamicPipeline(
+        llm_client=MockLLMClient(fixtures),
+        model_internal="x",
+        model_main="y",
+        sealed_ultimate_need="TOP_SECRET_USTAR_123",
+        guard_mode="enforce",
+    ).run(InMemoryConversation().build_state("hello"), debug=False)
+    assert out["approved"] is False
+    assert "guard_warnings" not in out
+
+
+def test_safe_error_message_redacts_private_ontology_variants():
+    secret = "TOP_SECRET_USTAR_123"
+    pipeline = PsychodynamicPipeline(
+        llm_client=MockLLMClient(_base_fixtures()),
+        model_internal="x",
+        model_main="y",
+        sealed_ultimate_need=secret,
+    )
+    message = (
+        f"latent alignment and latent_alignment leaked; "
+        f"secret={secret}; U* in private turn private id payload"
+    )
+    safe = pipeline._safe_error_message(message)
+    assert "latent alignment" not in safe
+    assert "latent_alignment" not in safe
+    assert secret not in safe
+    assert "U*" not in safe
+    assert "private turn" not in safe
+    assert "private id payload" not in safe
+
+
+def test_blocked_debug_trace_redacts_private_terms_and_secret():
+    secret = "TOP_SECRET_USTAR_123"
+    pipeline = PsychodynamicPipeline(
+        llm_client=MockLLMClient(_base_fixtures()),
+        model_internal="x",
+        model_main="y",
+        sealed_ultimate_need=secret,
+    )
+    result = pipeline._blocked_result(
+        debug=True,
+        error=PipelineSafetyError(
+            f"latent alignment latent_alignment PrivateIdTurnOutput {secret}",
+            stage="test_stage",
+        ),
+    )
+    safe_trace = str(result["safe_debug_trace"])
+    assert secret not in safe_trace
+    assert "latent alignment" not in safe_trace
+    assert "latent_alignment" not in safe_trace
+    assert "PrivateIdTurnOutput" not in safe_trace

@@ -30,6 +30,10 @@ def main():
     state = memory.build_state(args.message)
     out = pipeline.run(state, debug=args.debug)
     print(out["final_response"])
+    if out.get("guard_warnings"):
+        print("\n--- GUARD WARNINGS ---")
+        for warning in out["guard_warnings"]:
+            print(f"{warning.get('stage', 'unknown')}: {warning.get('message', '')}")
     if args.debug:
         print("\n--- SAFE DEBUG TRACE ---")
         print(out["safe_debug_trace"])
