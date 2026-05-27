@@ -336,6 +336,12 @@ def test_warn_mode_surfaces_guard_warnings_without_debug():
         and warning["message"]
         for warning in out["guard_warnings"]
     )
+    flattened = str(out["guard_warnings"])
+    assert "TOP_SECRET_USTAR_123" not in flattened
+    assert "latent_alignment" not in flattened
+    assert "latent alignment" not in flattened
+    assert "PrivateIdTurnOutput" not in flattened
+    assert "private turn" not in flattened
 
 
 def test_enforce_mode_does_not_surface_guard_warnings_without_debug():
