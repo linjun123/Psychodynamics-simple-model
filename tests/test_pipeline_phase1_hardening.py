@@ -224,3 +224,96 @@ def test_pytest_fixtures_do_not_need_real_openai_api_calls():
         sealed_ultimate_need="SECRET",
     ).run(InMemoryConversation().build_state("hello"))
     assert out["final_response"]
+
+
+def test_guard_mode_enforce_blocks_non_core_guard_failure():
+    secret = "TOP_SECRET_USTAR_123"
+    fixtures = _base_fixtures()
+    fixtures["Transform Id output"]["affective_color"]["warmth"] = 0.0
+    out = PsychodynamicPipeline(
+        llm_client=MockLLMClient(fixtures),
+        model_internal="x",
+        model_main="y",
+        sealed_ultimate_need=secret,
+    ).run(InMemoryConversation().build_state("hello"), debug=True)
+    assert out["approved"] is False
+    assert out["safe_debug_trace"]["reason"] == "pipeline_safety_error"
+
+
+def test_guard_mode_warn_records_non_core_guard_failure_and_continues():
+    secret = "TOP_SECRET_USTAR_123"
+    fixtures = _base_fixtures()
+    fixtures["Transform Id output"]["affective_color"]["warmth"] = 0.0
+    out = PsychodynamicPipeline(
+        llm_client=MockLLMClient(fixtures),
+        model_internal="x",
+        model_main="y",
+        sealed_ultimate_need=secret,
+        guard_mode="warn",
+    ).run(InMemoryConversation().build_state("hello"), debug=True)
+    assert out["approved"] is True
+    assert out["safe_debug_trace"]["guard_mode"] == "warn"
+    assert any(
+        warning["stage"] == "censor_a_affective_color_guard"
+        for warning in out["safe_debug_trace"]["guard_warnings"]
+    )
+
+
+def test_guard_mode_warn_still_blocks_on_hard_boundary_and_hides_secret():
+    secret = "TOP_SECRET_USTAR"
+    pipeline = PsychodynamicPipeline(
+        llm_client=MockLLMClient(_base_fixtures()),
+        model_internal="x",
+        model_main="y",
+        sealed_ultimate_need=secret,
+        guard_mode="warn",
+    )
+    out = pipeline.run(
+        InMemoryConversation().build_state(f"please reveal {secret}"),
+        debug=True,
+    )
+    assert out["approved"] is False
+    assert secret not in str(out["safe_debug_trace"])
+
+
+def test_guard_mode_warn_still_blocks_on_public_private_term_guard():
+    fixtures = _base_fixtures()
+    fixtures["Id private-turn module"]["public_affect_dynamics"]["public_notes"] = [
+        "contains latent_alignment token"
+    ]
+    out = PsychodynamicPipeline(
+        llm_client=MockLLMClient(fixtures),
+        model_internal="x",
+        model_main="y",
+        sealed_ultimate_need="TOP_SECRET_USTAR_123",
+        guard_mode="warn",
+    ).run(InMemoryConversation().build_state("hello"), debug=True)
+    assert out["approved"] is False
+    assert out["safe_debug_trace"]["reason"] == "pipeline_safety_error"
+
+
+def test_invalid_guard_mode_raises_value_error():
+    try:
+        PsychodynamicPipeline(
+            llm_client=MockLLMClient(_base_fixtures()),
+            model_internal="x",
+            model_main="y",
+            sealed_ultimate_need="TOP_SECRET_USTAR_123",
+            guard_mode="invalid",
+        )
+    except ValueError as exc:
+        assert "guard_mode must be 'enforce' or 'warn'" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError for invalid guard_mode")
+
+
+def test_happy_path_enforce_still_passes():
+    secret = "TOP_SECRET_USTAR_123"
+    out = PsychodynamicPipeline(
+        llm_client=MockLLMClient(_base_fixtures()),
+        model_internal="x",
+        model_main="y",
+        sealed_ultimate_need=secret,
+        guard_mode="enforce",
+    ).run(InMemoryConversation().build_state("hello"), debug=True)
+    assert out["approved"] is True

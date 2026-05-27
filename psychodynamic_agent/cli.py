@@ -10,6 +10,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("message", type=str)
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument(
+        "--guard-mode",
+        choices=["enforce", "warn"],
+        default="enforce",
+    )
     args = parser.parse_args()
 
     settings = get_settings()
@@ -20,6 +25,7 @@ def main():
         model_internal=settings.openai_model_internal,
         model_main=settings.openai_model_main,
         sealed_ultimate_need=settings.ultimate_need_seed,
+        guard_mode=args.guard_mode,
     )
     state = memory.build_state(args.message)
     out = pipeline.run(state, debug=args.debug)
