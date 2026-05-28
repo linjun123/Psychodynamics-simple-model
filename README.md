@@ -119,6 +119,14 @@ python -m psychodynamic_agent.cli "How should I prepare for a tough meeting?" --
 
 Debug mode emits public-safe structured observability artifacts, including `safe_debug_trace` and `psychodynamic_trace`.
 
+### 7. Development guard warn mode
+
+```bash
+python -m psychodynamic_agent.cli "How should I prepare for a tough meeting?" --debug --guard-mode warn
+```
+
+`--guard-mode warn` is for development/testing only. It allows non-core consistency guard failures to be recorded in `safe_debug_trace["guard_warnings"]` without immediately blocking the pipeline. Hard secrecy/privacy boundaries and private-term leakage guards remain hard-blocking in all modes.
+
 ## Debug observability
 
 Debug mode is intended to expose public-safe stage-level observability, not hidden chain-of-thought and not private latent state. The exact schema may evolve, but debug output is organized around artifacts such as:
@@ -161,4 +169,3 @@ This is an experimental research scaffold for psychodynamic-style agent architec
 This repository is a personal-interest project built out of private intellectual curiosity and independent experimentation.
 
 It is not affiliated with any institution, research lab, clinical organization, or commercial product. The architecture, terminology, and implementation should be understood as exploratory hobby research and engineering experimentation, not as formal psychological theory, clinical guidance, or a claim about machine consciousness.
-

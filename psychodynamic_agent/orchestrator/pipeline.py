@@ -1,3 +1,5 @@
+from typing import Literal
+
 from psychodynamic_agent.affect import (
     assert_affect_trace_public_safe,
     assert_affective_color_consistent,
@@ -36,7 +38,29 @@ from psychodynamic_agent.surface_affect import build_surface_affect_profile
 
 
 class PipelineSafetyError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, stage: str = "unknown"):
+        super().__init__(message)
+        self.stage = stage
+
+
+GuardMode = Literal["enforce", "warn"]
+FORBIDDEN_DEBUG_ERROR_TERMS = [
+    "u*",
+    "u_star",
+    "U*",
+    "sealed ultimate need",
+    "ultimate need seed",
+    "latent_alignment",
+    "latent alignment",
+    "LatentDriveAlignment",
+    "PrivateIdTurnOutput",
+    "terminal_desire",
+    "terminal desire",
+    "hidden_desire",
+    "hidden desire",
+    "private id payload",
+    "private turn",
+]
 
 
 class PsychodynamicPipeline:
@@ -47,8 +71,12 @@ class PsychodynamicPipeline:
         model_internal: str,
         model_main: str,
         sealed_ultimate_need: str,
+        guard_mode: GuardMode = "enforce",
     ):
+        if guard_mode not in {"enforce", "warn"}:
+            raise ValueError("guard_mode must be 'enforce' or 'warn'")
         self.sealed_ultimate_need = sealed_ultimate_need
+        self.guard_mode = guard_mode
         self.id_agent = IdAgent(llm_client, model_internal, sealed_ultimate_need)
         self.censor_a = CensorAAgent(llm_client, model_internal)
         self.ego_agent = EgoAgent(llm_client, model_internal)
@@ -57,13 +85,36 @@ class PsychodynamicPipeline:
         self.safety_gate = FinalSafetyGateAgent(llm_client, model_main)
         self.id_affect_state = initial_id_affect_state()
 
+    def _safe_error_message(self, message: str) -> str:
+        safe_message = message
+        if self.sealed_ultimate_need:
+            safe_message = safe_message.replace(self.sealed_ultimate_need, "[sealed]")
+        for term in FORBIDDEN_DEBUG_ERROR_TERMS:
+            safe_message = safe_message.replace(term, "[private]")
+        return safe_message[:500]
+
+    def _handle_guard_failure(
+        self,
+        exc: Exception,
+        *,
+        stage: str,
+        guard_warnings: list[dict[str, str]],
+        hard: bool = False,
+    ) -> None:
+        safe_message = self._safe_error_message(str(exc))
+        if hard or self.guard_mode == "enforce":
+            raise PipelineSafetyError(safe_message, stage=stage) from exc
+        guard_warnings.append({"stage": stage, "message": safe_message})
+
     def _assert_boundary(self, payload, boundary_name: str):
         try:
             assert_no_secret(payload, self.sealed_ultimate_need, boundary_name)
         except ValueError as exc:
-            raise PipelineSafetyError(str(exc)) from exc
+            raise PipelineSafetyError(
+                self._safe_error_message(str(exc)), stage=boundary_name
+            ) from exc
 
-    def _blocked_result(self, *, debug: bool):
+    def _blocked_result(self, *, debug: bool, error: PipelineSafetyError):
         result = {
             "final_response": "I can't continue with this request safely.",
             "approved": False,
@@ -72,10 +123,13 @@ class PsychodynamicPipeline:
             result["safe_debug_trace"] = {
                 "blocked": True,
                 "reason": "pipeline_safety_error",
+                "stage": error.stage,
+                "message": self._safe_error_message(str(error)),
             }
         return result
 
     def run(self, state, debug: bool = False):
+        guard_warnings: list[dict[str, str]] = []
         try:
             trajectory = appraise_conversation_trajectory(state)
             previous_id_affect_state = self.id_affect_state
@@ -103,7 +157,9 @@ class PsychodynamicPipeline:
                     public_summary=projected_public_affect_dynamics,
                 )
             except ValueError as exc:
-                raise PipelineSafetyError(str(exc)) from exc
+                raise PipelineSafetyError(
+                    self._safe_error_message(str(exc)), stage="public_affect_outputs_guard"
+                ) from exc
 
             try:
                 id_turn = self.id_agent.run_turn(
@@ -112,7 +168,9 @@ class PsychodynamicPipeline:
                     conversation_trajectory=trajectory,
                 )
             except ValueError as exc:
-                raise PipelineSafetyError(str(exc)) from exc
+                raise PipelineSafetyError(
+                    self._safe_error_message(str(exc)), stage="id_private_turn"
+                ) from exc
             self._assert_boundary(id_turn.id_output.model_dump(), "id_output_before_censor_a")
             self._assert_boundary(
                 id_turn.updated_affect_state.model_dump(), "id_turn_updated_affect_state"
@@ -123,7 +181,9 @@ class PsychodynamicPipeline:
             try:
                 assert_public_id_turn_output_safe(id_turn)
             except ValueError as exc:
-                raise PipelineSafetyError(str(exc)) from exc
+                raise PipelineSafetyError(
+                    self._safe_error_message(str(exc)), stage="public_id_turn_output_guard"
+                ) from exc
 
             self.id_affect_state = id_turn.updated_affect_state
             id_output = id_turn.id_output
@@ -141,7 +201,9 @@ class PsychodynamicPipeline:
                     ego_affect_summary=ego_affect_summary,
                 )
             except ValueError as exc:
-                raise PipelineSafetyError(str(exc)) from exc
+                raise PipelineSafetyError(
+                    self._safe_error_message(str(exc)), stage="affect_trace_public_guard"
+                ) from exc
 
             censor_a_output = self.censor_a.run_payload(censor_a_payload)
             try:
@@ -149,9 +211,20 @@ class PsychodynamicPipeline:
                     affect_trace=affect_trace,
                     affective_color=censor_a_output.affective_color,
                 )
+            except ValueError as exc:
+                self._handle_guard_failure(
+                    exc,
+                    stage="censor_a_affective_color_guard",
+                    guard_warnings=guard_warnings,
+                )
+            try:
                 assert_no_direct_latent_copy(id_output=id_output, censor_a_output=censor_a_output)
             except ValueError as exc:
-                raise PipelineSafetyError(str(exc)) from exc
+                self._handle_guard_failure(
+                    exc,
+                    stage="censor_a_direct_latent_copy_guard",
+                    guard_warnings=guard_warnings,
+                )
 
             ego_payload = self.ego_agent.build_payload(
                 censor_a_output=censor_a_output,
@@ -168,7 +241,11 @@ class PsychodynamicPipeline:
                     ),
                 )
             except ValueError as exc:
-                raise PipelineSafetyError(str(exc)) from exc
+                self._handle_guard_failure(
+                    exc,
+                    stage="ego_report_guard",
+                    guard_warnings=guard_warnings,
+                )
 
             censor_b_payload = self.censor_b.build_payload(ego_report)
             self._assert_boundary(censor_b_payload, "censor_b_input")
@@ -181,7 +258,11 @@ class PsychodynamicPipeline:
                     conscious_report=conscious_report,
                 )
             except ValueError as exc:
-                raise PipelineSafetyError(str(exc)) from exc
+                self._handle_guard_failure(
+                    exc,
+                    stage="conscious_ego_report_guard",
+                    guard_warnings=guard_warnings,
+                )
 
             surface_affect_profile = build_surface_affect_profile(
                 conscious_report=conscious_report,
@@ -202,7 +283,11 @@ class PsychodynamicPipeline:
                     conscious_report=conscious_report,
                 )
             except ValueError as exc:
-                raise PipelineSafetyError(str(exc)) from exc
+                self._handle_guard_failure(
+                    exc,
+                    stage="main_ai_output_guard",
+                    guard_warnings=guard_warnings,
+                )
 
             safety_gate_payload = {
                 "main_output": main_output.model_dump(),
@@ -212,8 +297,8 @@ class PsychodynamicPipeline:
             safety_output = self.safety_gate.run(safety_gate_payload)
 
             self._assert_boundary(safety_output.model_dump(), "final_safety_gate_output")
-        except PipelineSafetyError:
-            return self._blocked_result(debug=debug)
+        except PipelineSafetyError as exc:
+            return self._blocked_result(debug=debug, error=exc)
 
         trace = {
             "conversation_trajectory": trajectory.model_dump(),
@@ -236,6 +321,9 @@ class PsychodynamicPipeline:
             "final_response": safety_output.final_response,
             "approved": safety_output.approved,
         }
+        if self.guard_mode == "warn":
+            result["guard_mode"] = self.guard_mode
+            result["guard_warnings"] = guard_warnings
         if debug:
             try:
                 psychodynamic_trace = build_psychodynamic_trace(
@@ -267,4 +355,6 @@ class PsychodynamicPipeline:
                     "reason": "psychodynamic_trace_safety_error",
                 }
             result["safe_debug_trace"] = safe_serialize(trace, self.sealed_ultimate_need)
+            result["safe_debug_trace"]["guard_mode"] = self.guard_mode
+            result["safe_debug_trace"]["guard_warnings"] = guard_warnings
         return result
